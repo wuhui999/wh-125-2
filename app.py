@@ -19,6 +19,7 @@ from utils import (
     calculate_daily_metrics,
     detect_all_anomalies,
     summarize_anomalies,
+    estimate_saving_potential,
     set_plotly_chinese_font,
     PRODUCTION_LINES,
 )
@@ -60,9 +61,10 @@ with st.spinner("正在计算指标..."):
     daily_metrics = calculate_daily_metrics(meter_df)
     anomaly_df = detect_all_anomalies(meter_df, production_df)
     anomaly_summary = summarize_anomalies(anomaly_df)
+    saving_potential = estimate_saving_potential(anomaly_df)
 
 st.markdown("### 🔑 关键指标")
-col1, col2, col3, col4 = st.columns(4)
+col1, col2, col3, col4, col5 = st.columns(5)
 
 with col1:
     st.metric(
@@ -96,6 +98,14 @@ with col4:
         value=f"{kpis['peak_valley_ratio']:.1f}%",
         delta=f"峰段 {peak_valley_ratios['peak_ratio']:.1f}% / 谷段 {peak_valley_ratios['valley_ratio']:.1f}%",
         delta_color="off",
+    )
+
+with col5:
+    st.metric(
+        label="预估节电潜力",
+        value=f"{format_number(saving_potential['total_saving_yuan'])} 元",
+        delta=f"节电 {format_number(saving_potential['total_saving_kwh'])} kWh" if saving_potential['total_saving_kwh'] > 0 else "暂无节电潜力",
+        delta_color="normal",
     )
 
 st.markdown("---")

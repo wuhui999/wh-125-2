@@ -9,7 +9,7 @@ from utils.metrics_calculator import (
     calculate_overall_kpis,
     calculate_production_correlation,
 )
-from utils.anomaly_detector import detect_all_anomalies, summarize_anomalies, ANOMALY_TYPES
+from utils.anomaly_detector import detect_all_anomalies, summarize_anomalies, estimate_saving_potential, ANOMALY_TYPES
 from utils.common import (
     load_session_data,
     save_session_data,
@@ -39,6 +39,7 @@ __all__ = [
     "calculate_production_correlation",
     "detect_all_anomalies",
     "summarize_anomalies",
+    "estimate_saving_potential",
     "ANOMALY_TYPES",
     "load_session_data",
     "save_session_data",

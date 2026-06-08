@@ -404,3 +404,152 @@ def summarize_anomalies(anomaly_df: pd.DataFrame) -> Dict:
         "by_line": anomaly_df.groupby("production_line").size().to_dict(),
         "by_team": anomaly_df.groupby("team").size().to_dict(),
     }
+
+
+def estimate_saving_potential(
+    anomaly_df: pd.DataFrame,
+    peak_price: float = 1.2,
+    valley_price: float = 0.4,
+    flat_price: float = 0.8,
+) -> Dict:
+    """
+    基于异常检测结果估算节电潜力与节费金额。
+
+    估算规则：
+    1. 停机高耗电 (idle_high_power):
+       节电量 = (当前功率 - 基准功率) × 0.25小时（15分钟采样间隔）
+       按平段电价计算
+
+    2. 低产高耗电 (low_output_high_power):
+       节电量 = (单位能耗 - 基准单位能耗) × 产量
+       按平段电价计算
+
+    3. 电耗同比波动 (power_fluctuation):
+       节电量 = |当前电耗 - 历史均值| × 50%（假设可优化50%波动）
+       按平段电价计算
+
+    4. 数据缺失 (missing_data): 无法估算，节电量为 0
+
+    5. 空载耗电过高 (high_idle_ratio):
+       节电量 = 空载电耗 × (空载占比 - 10%阈值) / 空载占比
+       按平段电价计算
+
+    6. 峰段用电异常 (peak_usage_abnormal):
+       节电量 = 峰段电耗 × (峰段占比 - 50%阈值)
+       节费 = 节电量 × (峰电价 - 谷电价) 假设可转移至谷段
+
+    7. 单位能耗异常 (uec_abnormal):
+       节电量 = (班组单位能耗 - 其他班组均值) × 平均日产量 × 30天
+       （每条记录代表该班组整体情况，按月度估算）
+       按平段电价计算
+
+    Args:
+        anomaly_df: detect_all_anomalies 返回的异常数据 DataFrame
+        peak_price: 峰段电价（元/kWh），默认 1.2
+        valley_price: 谷段电价（元/kWh），默认 0.4
+        flat_price: 平段电价（元/kWh），默认 0.8
+
+    Returns:
+        包含总节电量、总节费、按类型汇总的字典
+    """
+    if anomaly_df.empty:
+        return {
+            "total_saving_kwh": 0.0,
+            "total_saving_yuan": 0.0,
+            "by_type": {},
+            "price_scheme": {
+                "peak": peak_price,
+                "valley": valley_price,
+                "flat": flat_price,
+            },
+        }
+
+    by_type_savings = {}
+
+    for anomaly_type, type_info in ANOMALY_TYPES.items():
+        type_name = type_info["name"]
+        type_df = anomaly_df[anomaly_df["anomaly_type"] == anomaly_type]
+
+        if type_df.empty:
+            continue
+
+        total_kwh = 0.0
+        total_yuan = 0.0
+
+        for _, row in type_df.iterrows():
+            saving_kwh = 0.0
+            price = flat_price
+
+            if anomaly_type == "idle_high_power":
+                power_kw = row.get("power_kw", 0)
+                baseline = row.get("baseline", 0)
+                if pd.notna(power_kw) and pd.notna(baseline) and power_kw > baseline:
+                    saving_kwh = (power_kw - baseline) * 0.25
+
+            elif anomaly_type == "low_output_high_power":
+                unit_ec = row.get("unit_ec", 0)
+                baseline = row.get("baseline", 0)
+                output = row.get("output_quantity", 0)
+                if pd.notna(unit_ec) and pd.notna(baseline) and unit_ec > baseline:
+                    saving_kwh = (unit_ec - baseline) * output
+
+            elif anomaly_type == "power_fluctuation":
+                current = row.get("current_power", 0)
+                baseline = row.get("baseline", 0)
+                if pd.notna(current) and pd.notna(baseline):
+                    saving_kwh = abs(current - baseline) * 0.5
+
+            elif anomaly_type == "high_idle_ratio":
+                idle_power = row.get("idle_power", 0)
+                idle_ratio = row.get("idle_ratio", 0)
+                threshold = 10
+                if pd.notna(idle_power) and pd.notna(idle_ratio) and idle_ratio > threshold:
+                    saving_kwh = idle_power * (idle_ratio - threshold) / idle_ratio
+
+            elif anomaly_type == "peak_usage_abnormal":
+                peak_power = row.get("peak_power", 0)
+                peak_ratio = row.get("peak_ratio", 0)
+                threshold = 50
+                if pd.notna(peak_power) and pd.notna(peak_ratio) and peak_ratio > threshold:
+                    saving_kwh = peak_power * (peak_ratio - threshold) / peak_ratio
+                    price = peak_price - valley_price
+
+            elif anomaly_type == "uec_abnormal":
+                team_uec = row.get("team_uec", 0)
+                baseline_uec = row.get("baseline_uec", 0)
+                if pd.notna(team_uec) and pd.notna(baseline_uec) and team_uec > baseline_uec:
+                    avg_daily_output = 100
+                    saving_kwh = (team_uec - baseline_uec) * avg_daily_output * 30
+
+            elif anomaly_type == "missing_data":
+                saving_kwh = 0.0
+
+            saving_kwh = max(0, saving_kwh)
+            total_kwh += saving_kwh
+            total_yuan += saving_kwh * price
+
+        if total_kwh > 0:
+            by_type_savings[type_name] = {
+                "saving_kwh": round(total_kwh, 2),
+                "saving_yuan": round(total_yuan, 2),
+                "anomaly_count": len(type_df),
+                "anomaly_type": anomaly_type,
+            }
+
+    total_saving_kwh = sum(v["saving_kwh"] for v in by_type_savings.values())
+    total_saving_yuan = sum(v["saving_yuan"] for v in by_type_savings.values())
+
+    return {
+        "total_saving_kwh": round(total_saving_kwh, 2),
+        "total_saving_yuan": round(total_saving_yuan, 2),
+        "by_type": dict(sorted(
+            by_type_savings.items(),
+            key=lambda x: x[1]["saving_yuan"],
+            reverse=True
+        )),
+        "price_scheme": {
+            "peak": peak_price,
+            "valley": valley_price,
+            "flat": flat_price,
+        },
+    }

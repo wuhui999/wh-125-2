@@ -89,7 +89,11 @@ def export_to_excel(data_frames: Dict[str, pd.DataFrame]) -> bytes:
     return output.getvalue()
 
 
-def generate_energy_saving_report(anomaly_df: pd.DataFrame, kpis: Dict) -> str:
+def generate_energy_saving_report(
+    anomaly_df: pd.DataFrame,
+    kpis: Dict,
+    saving_potential: Optional[Dict] = None,
+) -> str:
     report = []
     report.append("=" * 60)
     report.append("                工厂能耗分析异常报告")
@@ -106,7 +110,26 @@ def generate_energy_saving_report(anomaly_df: pd.DataFrame, kpis: Dict) -> str:
     report.append(f"  数据完整率:     {kpis['data_completeness']:.2f}%")
     report.append("")
 
-    report.append("二、异常检测汇总")
+    report.append("二、节电潜力估算")
+    report.append("-" * 40)
+
+    if saving_potential is None or saving_potential["total_saving_kwh"] == 0:
+        report.append("  ✅ 暂无节电潜力可估算")
+    else:
+        price = saving_potential["price_scheme"]
+        report.append(f"  电价方案: 峰 {price['peak']} 元/kWh | 谷 {price['valley']} 元/kWh | 平 {price['flat']} 元/kWh")
+        report.append("")
+        report.append(f"  ⚡ 预估总节电量:  {format_number(saving_potential['total_saving_kwh'])} kWh")
+        report.append(f"  💴 预估总节费:    {format_number(saving_potential['total_saving_yuan'])} 元")
+        report.append("")
+
+        report.append("  按异常类型细分:")
+        for type_name, info in saving_potential["by_type"].items():
+            report.append(f"    • {type_name}:")
+            report.append(f"      异常 {info['anomaly_count']} 项, 节电 {format_number(info['saving_kwh'])} kWh, 节费 {format_number(info['saving_yuan'])} 元")
+        report.append("")
+
+    report.append("三、异常检测汇总")
     report.append("-" * 40)
 
     if anomaly_df.empty:
@@ -134,7 +157,7 @@ def generate_energy_saving_report(anomaly_df: pd.DataFrame, kpis: Dict) -> str:
             report.append(f"    • {team}: {count} 项")
         report.append("")
 
-        report.append("三、异常明细")
+        report.append("四、异常明细")
         report.append("-" * 40)
 
         for idx, row in anomaly_df.head(20).iterrows():
@@ -149,7 +172,7 @@ def generate_energy_saving_report(anomaly_df: pd.DataFrame, kpis: Dict) -> str:
             report.append(f"  ... 还有 {len(anomaly_df) - 20} 条异常记录请查看完整清单")
             report.append("")
 
-    report.append("四、节能建议汇总")
+    report.append("五、节能建议汇总")
     report.append("-" * 40)
 
     suggestions = set()

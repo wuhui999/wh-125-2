@@ -15,6 +15,7 @@ from utils import (
     get_severity_emoji,
     detect_all_anomalies,
     summarize_anomalies,
+    estimate_saving_potential,
     calculate_overall_kpis,
     generate_energy_saving_report,
     export_to_excel,
@@ -94,6 +95,122 @@ with col4:
         delta=f"涉及 {len(anomaly_summary['by_team'])} 个班组" if anomaly_summary['by_team'] else "0 个班组",
         delta_color="off",
     )
+
+st.markdown("---")
+
+st.markdown("### 🔍 异常筛选")
+
+if anomaly_df.empty:
+    st.info("✅ 未检测到异常，无需筛选")
+    filtered_df = pd.DataFrame()
+else:
+    filter_cols = st.columns(4)
+
+    with filter_cols[0]:
+        severity_filter = st.multiselect(
+            "严重程度",
+            options=["高", "中", "低"],
+            default=["高", "中", "低"],
+        )
+
+    with filter_cols[1]:
+        type_filter = st.multiselect(
+            "异常类型",
+            options=list(anomaly_df["anomaly_name"].unique()),
+            default=list(anomaly_df["anomaly_name"].unique()),
+        )
+
+    with filter_cols[2]:
+        line_filter = st.multiselect(
+            "产线",
+            options=PRODUCTION_LINES,
+            default=PRODUCTION_LINES,
+        )
+
+    with filter_cols[3]:
+        team_filter = st.multiselect(
+            "班组",
+            options=TEAMS,
+            default=TEAMS,
+        )
+
+    filtered_df = anomaly_df[
+        (anomaly_df["severity"].isin(severity_filter)) &
+        (anomaly_df["anomaly_name"].isin(type_filter)) &
+        (anomaly_df["production_line"].isin(line_filter)) &
+        (anomaly_df["team"].isin(team_filter))
+    ].copy()
+
+    st.markdown(f"**筛选结果：** 共 {len(filtered_df)} 条异常记录")
+
+saving_potential = estimate_saving_potential(filtered_df)
+
+st.markdown("---")
+
+st.markdown("### 💰 节电潜力汇总（基于筛选结果）")
+saving_cols = st.columns(2)
+
+with saving_cols[0]:
+    st.metric(
+        label="⚡ 预估节电量",
+        value=f"{format_number(saving_potential['total_saving_kwh'])} kWh",
+        delta=f"电价: 峰{saving_potential['price_scheme']['peak']} / 谷{saving_potential['price_scheme']['valley']} / 平{saving_potential['price_scheme']['flat']} 元/kWh",
+        delta_color="normal",
+    )
+
+with saving_cols[1]:
+    st.metric(
+        label="💴 预估节费金额",
+        value=f"{format_number(saving_potential['total_saving_yuan'])} 元",
+        delta=f"相当于 {format_number(saving_potential['total_saving_yuan'] / saving_potential['price_scheme']['flat'])} kWh 平段电" if saving_potential['total_saving_yuan'] > 0 else "暂无节电潜力",
+        delta_color="normal",
+    )
+
+if filtered_df.empty:
+    st.info("✅ 未检测到异常或当前筛选条件下无数据")
+elif not saving_potential["by_type"]:
+    st.info("✅ 当前筛选结果无节电潜力可估算")
+else:
+    with st.expander("📊 按异常类型细分节电潜力", expanded=True):
+        type_saving_df = pd.DataFrame([
+            {
+                "异常类型": type_name,
+                "异常次数": info["anomaly_count"],
+                "节电量 (kWh)": info["saving_kwh"],
+                "节费金额 (元)": info["saving_yuan"],
+            }
+            for type_name, info in saving_potential["by_type"].items()
+        ])
+        type_saving_df = type_saving_df.sort_values("节费金额 (元)", ascending=False)
+
+        fig_saving = go.Figure()
+        fig_saving.add_trace(go.Bar(
+            y=type_saving_df["异常类型"],
+            x=type_saving_df["节费金额 (元)"],
+            name="节费金额",
+            marker_color="#2ecc71",
+            orientation="h",
+            text=type_saving_df["节费金额 (元)"].apply(lambda x: f"¥{x:,.0f}"),
+            textposition="auto",
+        ))
+        fig_saving.update_layout(
+            xaxis_title="节费金额 (元)",
+            yaxis_title="异常类型",
+            height=300,
+            margin=dict(l=0, r=0, t=30, b=0),
+            showlegend=False,
+        )
+        st.plotly_chart(set_plotly_chinese_font(fig_saving), use_container_width=True)
+
+        st.dataframe(
+            type_saving_df.style
+            .format({
+                "节电量 (kWh)": "{:,.2f}",
+                "节费金额 (元)": "{:,.2f}",
+            }),
+            use_container_width=True,
+            hide_index=True,
+        )
 
 st.markdown("---")
 
@@ -193,52 +310,6 @@ else:
         margin=dict(l=0, r=0, t=30, b=0),
     )
     st.plotly_chart(set_plotly_chinese_font(fig_team), use_container_width=True)
-
-st.markdown("---")
-
-st.markdown("### 🔍 异常筛选")
-
-if anomaly_df.empty:
-    st.info("✅ 未检测到异常，无需筛选")
-else:
-    filter_cols = st.columns(4)
-
-    with filter_cols[0]:
-        severity_filter = st.multiselect(
-            "严重程度",
-            options=["高", "中", "低"],
-            default=["高", "中", "低"],
-        )
-
-    with filter_cols[1]:
-        type_filter = st.multiselect(
-            "异常类型",
-            options=list(anomaly_df["anomaly_name"].unique()),
-            default=list(anomaly_df["anomaly_name"].unique()),
-        )
-
-    with filter_cols[2]:
-        line_filter = st.multiselect(
-            "产线",
-            options=PRODUCTION_LINES,
-            default=PRODUCTION_LINES,
-        )
-
-    with filter_cols[3]:
-        team_filter = st.multiselect(
-            "班组",
-            options=TEAMS,
-            default=TEAMS,
-        )
-
-    filtered_df = anomaly_df[
-        (anomaly_df["severity"].isin(severity_filter)) &
-        (anomaly_df["anomaly_name"].isin(type_filter)) &
-        (anomaly_df["production_line"].isin(line_filter)) &
-        (anomaly_df["team"].isin(team_filter))
-    ].copy()
-
-    st.markdown(f"**筛选结果：** 共 {len(filtered_df)} 条异常记录")
 
 st.markdown("---")
 st.markdown("### 📋 异常明细")
@@ -342,7 +413,7 @@ report_cols = st.columns(2)
 
 with report_cols[0]:
     st.markdown("#### 📄 异常报告 (文本)")
-    report_text = generate_energy_saving_report(anomaly_df, kpis)
+    report_text = generate_energy_saving_report(filtered_df, kpis, saving_potential)
     st.download_button(
         label="📥 下载异常报告",
         data=report_text,
@@ -356,15 +427,38 @@ with report_cols[0]:
 
 with report_cols[1]:
     st.markdown("#### 📊 异常数据 (Excel)")
-    if not anomaly_df.empty:
-        export_df = anomaly_df.copy()
+    if filtered_df.empty:
+        st.info("暂无异常数据可导出")
+    else:
+        export_df = filtered_df.copy()
         export_df["timestamp"] = export_df["timestamp"].astype(str)
         if "suggestions" in export_df.columns:
             export_df["suggestions"] = export_df["suggestions"].apply(
                 lambda x: "\n".join(x) if isinstance(x, list) else str(x)
             )
 
-        excel_data = export_to_excel({"异常清单": export_df})
+        export_sheets = {"异常清单": export_df}
+
+        if saving_potential["by_type"]:
+            saving_summary_df = pd.DataFrame([
+                {
+                    "异常类型": type_name,
+                    "异常次数": info["anomaly_count"],
+                    "节电量 (kWh)": info["saving_kwh"],
+                    "节费金额 (元)": info["saving_yuan"],
+                }
+                for type_name, info in saving_potential["by_type"].items()
+            ])
+            total_row = pd.DataFrame([{
+                "异常类型": "合计",
+                "异常次数": saving_summary_df["异常次数"].sum(),
+                "节电量 (kWh)": saving_potential["total_saving_kwh"],
+                "节费金额 (元)": saving_potential["total_saving_yuan"],
+            }])
+            saving_summary_df = pd.concat([saving_summary_df, total_row], ignore_index=True)
+            export_sheets["节电潜力汇总"] = saving_summary_df
+
+        excel_data = export_to_excel(export_sheets)
         st.download_button(
             label="📥 下载异常清单 (Excel)",
             data=excel_data,
@@ -372,8 +466,6 @@ with report_cols[1]:
             mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
             use_container_width=True,
         )
-    else:
-        st.info("暂无异常数据可导出")
 
 st.markdown("---")
 st.markdown("### 📚 异常类型说明")
