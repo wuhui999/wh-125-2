@@ -3,3 +3,9 @@ gatherUsageStats = false
 
 [server]
 headless = true
+
+[client]
+showSidebarNavigation = false
+
+[theme]
+font = "sans serif"

@@ -19,6 +19,7 @@ from utils import (
     calculate_daily_metrics,
     detect_all_anomalies,
     summarize_anomalies,
+    set_plotly_chinese_font,
     PRODUCTION_LINES,
 )
 
@@ -129,7 +130,7 @@ with col1:
         margin=dict(l=0, r=0, t=30, b=0),
         height=350,
     )
-    st.plotly_chart(fig_trend, use_container_width=True)
+    st.plotly_chart(set_plotly_chinese_font(fig_trend), use_container_width=True)
 
 with col2:
     st.markdown("### ⚡ 峰谷用电比例")
@@ -161,7 +162,7 @@ with col2:
         height=350,
         showlegend=False,
     )
-    st.plotly_chart(fig_pie, use_container_width=True)
+    st.plotly_chart(set_plotly_chinese_font(fig_pie), use_container_width=True)
 
 st.markdown("---")
 
@@ -187,7 +188,7 @@ with col1:
         margin=dict(l=0, r=0, t=30, b=0),
         height=350,
     )
-    st.plotly_chart(fig_line, use_container_width=True)
+    st.plotly_chart(set_plotly_chinese_font(fig_line), use_container_width=True)
 
 with col2:
     st.markdown("### ⚠️ 异常类型分布")
@@ -213,7 +214,7 @@ with col2:
             margin=dict(l=0, r=0, t=30, b=0),
             height=350,
         )
-        st.plotly_chart(fig_anomaly, use_container_width=True)
+        st.plotly_chart(set_plotly_chinese_font(fig_anomaly), use_container_width=True)
 
 st.markdown("---")
 
@@ -257,4 +258,4 @@ fig.update_layout(
     height=300,
     hovermode="x unified",
 )
-st.plotly_chart(fig, use_container_width=True)
+st.plotly_chart(set_plotly_chinese_font(fig), use_container_width=True)

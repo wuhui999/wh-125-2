@@ -18,6 +18,7 @@ from utils import (
     calculate_overall_kpis,
     generate_energy_saving_report,
     export_to_excel,
+    set_plotly_chinese_font,
     ANOMALY_TYPES,
     PRODUCTION_LINES,
     TEAMS,
@@ -120,7 +121,7 @@ with col1:
             margin=dict(l=0, r=0, t=30, b=0),
             showlegend=False,
         )
-        st.plotly_chart(fig_type, use_container_width=True)
+        st.plotly_chart(set_plotly_chinese_font(fig_type), use_container_width=True)
 
 with col2:
     st.markdown("### 🏭 异常产线分布")
@@ -144,7 +145,7 @@ with col2:
             margin=dict(l=0, r=0, t=30, b=0),
             legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1),
         )
-        st.plotly_chart(fig_line, use_container_width=True)
+        st.plotly_chart(set_plotly_chinese_font(fig_line), use_container_width=True)
 
 st.markdown("---")
 
@@ -190,7 +191,7 @@ else:
         height=300,
         margin=dict(l=0, r=0, t=30, b=0),
     )
-    st.plotly_chart(fig_team, use_container_width=True)
+    st.plotly_chart(set_plotly_chinese_font(fig_team), use_container_width=True)
 
 st.markdown("---")
 
@@ -318,7 +319,7 @@ else:
                 },
             ))
             fig_gauge.update_layout(height=250, margin=dict(l=0, r=0, t=0, b=0))
-            st.plotly_chart(fig_gauge, use_container_width=True)
+            st.plotly_chart(set_plotly_chinese_font(fig_gauge), use_container_width=True)
 
             if "baseline" in selected and not pd.isna(selected["baseline"]):
                 st.metric(

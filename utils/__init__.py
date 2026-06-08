@@ -21,6 +21,7 @@ from utils.common import (
     generate_energy_saving_report,
     parse_uploaded_file,
     validate_data,
+    set_plotly_chinese_font,
 )
 
 __all__ = [
@@ -49,4 +50,5 @@ __all__ = [
     "generate_energy_saving_report",
     "parse_uploaded_file",
     "validate_data",
+    "set_plotly_chinese_font",
 ]

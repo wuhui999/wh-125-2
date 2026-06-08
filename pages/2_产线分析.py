@@ -16,6 +16,7 @@ from utils import (
     calculate_hourly_distribution,
     calculate_production_correlation,
     calculate_overall_kpis,
+    set_plotly_chinese_font,
     PRODUCTION_LINES,
 )
 
@@ -174,7 +175,7 @@ with col1:
     fig.update_yaxes(title_text="用电量 (kWh)", row=1, col=1)
     fig.update_yaxes(title_text="空载占比 (%)", row=2, col=1)
 
-    st.plotly_chart(fig, use_container_width=True)
+    st.plotly_chart(set_plotly_chinese_font(fig), use_container_width=True)
 
 with col2:
     st.markdown("### ⏰ 小时用电视图")
@@ -203,7 +204,7 @@ with col2:
         height=300,
         margin=dict(l=0, r=0, t=30, b=0),
     )
-    st.plotly_chart(fig_hourly, use_container_width=True)
+    st.plotly_chart(set_plotly_chinese_font(fig_hourly), use_container_width=True)
 
     st.markdown("### 🏃 设备运行率")
     fig_run = go.Figure(go.Bar(
@@ -218,7 +219,7 @@ with col2:
         height=200,
         margin=dict(l=0, r=0, t=30, b=0),
     )
-    st.plotly_chart(fig_run, use_container_width=True)
+    st.plotly_chart(set_plotly_chinese_font(fig_run), use_container_width=True)
 
 st.markdown("---")
 
@@ -244,7 +245,7 @@ with col1:
         height=400,
         margin=dict(l=0, r=0, t=30, b=0),
     )
-    st.plotly_chart(fig_scatter, use_container_width=True)
+    st.plotly_chart(set_plotly_chinese_font(fig_scatter), use_container_width=True)
 
 with col2:
     st.markdown("### 📊 单位能耗分布")
@@ -264,7 +265,7 @@ with col2:
         height=400,
         margin=dict(l=0, r=0, t=30, b=0),
     )
-    st.plotly_chart(fig_box, use_container_width=True)
+    st.plotly_chart(set_plotly_chinese_font(fig_box), use_container_width=True)
 
 st.markdown("---")
 st.markdown("### 📋 产线对比汇总")
@@ -341,4 +342,4 @@ fig_heatmap.update_layout(
     height=350,
     margin=dict(l=0, r=0, t=30, b=0),
 )
-st.plotly_chart(fig_heatmap, use_container_width=True)
+st.plotly_chart(set_plotly_chinese_font(fig_heatmap), use_container_width=True)

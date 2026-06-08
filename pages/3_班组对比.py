@@ -14,6 +14,7 @@ from utils import (
     format_number,
     calculate_team_metrics,
     calculate_overall_kpis,
+    set_plotly_chinese_font,
     TEAMS,
     PRODUCTION_LINES,
 )
@@ -111,7 +112,7 @@ with col1:
         margin=dict(l=0, r=0, t=30, b=0),
         height=400,
     )
-    st.plotly_chart(fig_bar, use_container_width=True)
+    st.plotly_chart(set_plotly_chinese_font(fig_bar), use_container_width=True)
 
 with col2:
     st.markdown("### 📈 效率对比基准线")
@@ -147,7 +148,7 @@ with col2:
         margin=dict(l=0, r=0, t=30, b=0),
         height=400,
     )
-    st.plotly_chart(fig_scatter, use_container_width=True)
+    st.plotly_chart(set_plotly_chinese_font(fig_scatter), use_container_width=True)
 
 st.markdown("---")
 
@@ -186,7 +187,7 @@ fig_heatmap.update_layout(
     height=350,
     margin=dict(l=0, r=0, t=30, b=0),
 )
-st.plotly_chart(fig_heatmap, use_container_width=True)
+st.plotly_chart(set_plotly_chinese_font(fig_heatmap), use_container_width=True)
 
 st.markdown("---")
 
@@ -308,7 +309,7 @@ fig.update_layout(
     height=350,
     hovermode="x unified",
 )
-st.plotly_chart(fig, use_container_width=True)
+st.plotly_chart(set_plotly_chinese_font(fig), use_container_width=True)
 
 st.markdown("---")
 st.markdown("### 💡 班组归因分析")

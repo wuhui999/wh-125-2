@@ -4,6 +4,51 @@ import io
 from typing import Dict, Optional
 
 
+def set_plotly_chinese_font(fig):
+    fig.update_layout(
+        font={
+            "family": "Microsoft YaHei, SimHei, Arial Unicode MS, sans-serif",
+            "size": 12,
+        },
+        xaxis={
+            "titlefont": {
+                "family": "Microsoft YaHei, SimHei, Arial Unicode MS, sans-serif",
+            },
+            "tickfont": {
+                "family": "Microsoft YaHei, SimHei, Arial Unicode MS, sans-serif",
+            },
+        },
+        yaxis={
+            "titlefont": {
+                "family": "Microsoft YaHei, SimHei, Arial Unicode MS, sans-serif",
+            },
+            "tickfont": {
+                "family": "Microsoft YaHei, SimHei, Arial Unicode MS, sans-serif",
+            },
+        },
+        legend={
+            "font": {
+                "family": "Microsoft YaHei, SimHei, Arial Unicode MS, sans-serif",
+            },
+        },
+        annotations=[{
+            "font": {
+                "family": "Microsoft YaHei, SimHei, Arial Unicode MS, sans-serif",
+            },
+        }],
+    )
+    if hasattr(fig, "update_traces"):
+        try:
+            fig.update_traces(
+                textfont={
+                    "family": "Microsoft YaHei, SimHei, Arial Unicode MS, sans-serif",
+                }
+            )
+        except Exception:
+            pass
+    return fig
+
+
 def load_session_data(st) -> Dict:
     if "data" not in st.session_state:
         return None
